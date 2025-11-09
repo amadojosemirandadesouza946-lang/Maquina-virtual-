@@ -2,11 +2,8 @@ name: Android Build & Upload APK
 
 on:
   push:
-    branches:
-      - main
+    branches: [ main ]
   pull_request:
-    branches:
-      - main
   workflow_dispatch:
 
 jobs:
@@ -14,16 +11,16 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # 1️⃣ Checkout do repositório
+      # 1️⃣ Checkout
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # 2️⃣ Certifica que gradlew tem permissão de execução
+      # 2️⃣ Garantir permissão de execução do gradlew
       - name: Ensure Gradle Wrapper is executable
         run: chmod +x ./AuroraLauncher/gradlew
 
-      # 3️⃣ Configura JDK
-      - name: Set up JDK 11
+      # 3️⃣ Configurar JDK
+      - name: Set up JDK
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
@@ -31,31 +28,32 @@ jobs:
 
       # 4️⃣ Build Debug APK
       - name: Build Debug APK
-        working-directory: AuroraLauncher   # ajuste se o gradlew estiver em outro caminho
+        working-directory: AuroraLauncher
         run: ./gradlew assembleDebug --no-daemon
 
-      # 5️⃣ Build Release APK (apenas para main)
-      - name: Build Release APK
-        if: github.ref == 'refs/heads/main'
-        working-directory: AuroraLauncher
-        run: ./gradlew assembleRelease --no-daemon
+      # 5️⃣ Mostrar pastas onde os APKs normalmente ficam
+      - name: List APK folders
+        run: |
+          echo "Listando árvore de outputs/apk:"
+          ls -R ./AuroraLauncher/app/build/outputs/apk/ || echo "Nenhuma pasta encontrada"
 
-      # 6️⃣ Upload Debug APK(s)
-      - name: Upload Debug APK artifact
+      # 6️⃣ Buscar em TODO o repositório por APKs
+      - name: Buscar APKs no runner
+        run: |
+          echo "Procurando arquivos .apk no repositório:"
+          find . -name "*.apk" -type f || echo "Nenhum APK encontrado"
+
+      # 7️⃣ Copiar APKs encontrados para pasta downloads
+      - name: Copiar APKs para pasta downloads
+        run: |
+          mkdir -p downloads
+          find . -name "*.apk" -exec cp {} ./downloads/ \;
+
+      # 8️⃣ Upload como artifact
+      - name: Upload APKs
         uses: actions/upload-artifact@v4
         with:
-          name: app-debug
-          path: AuroraLauncher/app/build/outputs/apk/*/debug/*.apk
+          name: apks-gerados
+          path: downloads/*.apk
           if-no-files-found: error
-
-      # 7️⃣ Upload Release APK(s)
-      - name: Upload Release APK artifact
-        if: github.ref == 'refs/heads/main'
-        uses: actions/upload-artifact@v4
-        with:
-          name: app-release
-          path: AuroraLauncher/app/build/outputs/apk/*/release/*.apk
-          if-no-files-found: error
-
-
 
